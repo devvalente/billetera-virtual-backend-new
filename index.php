@@ -20,6 +20,16 @@
 			echo json_encode($respuesta);
 		}	
 
+		//RECARGAR BILLETERA
+		if($accion == 'recargar_billetera'){
+			$data = [];
+				$data[0]= $_POST['documento'];				
+				$data[1]= $_POST['celular'];
+				$data[2]= $_POST['valor'];
+			$respuesta = recargarBilletera($data);
+			echo json_encode($respuesta, JSON_NUMERIC_CHECK);
+		}
+
 	}
 	
 	if($_SERVER['REQUEST_METHOD']=='GET'){

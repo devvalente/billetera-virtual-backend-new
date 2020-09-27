@@ -13,10 +13,7 @@
 		return $em;
 	}
 
-	function probar(){
-		return "Probando";
-	}
-
+	##REGISTAR CLIENTE
 	function registrarCliente($documento, $primerNombre, $primerApellido, $email, $celular){				
 		$em = entityManager();
 		try{		
@@ -39,7 +36,7 @@
 		}
 			
 	}
-
+	##REGISTRAR BILLETERA
 		function registrarBilletera($data){			
 			try{
 				$em = entityManager();
@@ -56,6 +53,7 @@
 						
 		}
 
+	##CONSULTAR CLIENTES
 	function consultarCliente($id){		
 		$em = entityManager();
 
@@ -93,18 +91,42 @@
 
 	}
 
+	##RECARGAR BILLETERA
+	function recargarBilletera($data){
+		$em = entityManager();
+
+		//Buscar el documento según el número de celular
+		$cliente = $em->getRepository('Cliente')->findOneBy(array("documento"=>$data[0], "celular"=>$data[1]));		
+		//Recargar el saldo
+		$billetera = $em->getRepository('Billetera')->findOneBy(array("documentoId"=>$cliente->getDocumento()));
+			$saldoAnterior = $billetera->getSaldo();
+			$billetera->setSaldo($saldoAnterior + $data[2]);
+			$em->persist($billetera);
+			$em->flush($billetera);
+
+		$respuesta = [];
+			$respuesta['respuesta']			= 'Ok';
+			$respuesta['documento']			= $cliente->getDocumento();
+			$respuesta['celular']  			= $cliente->getCelular();
+			$respuesta['saldoAnterior']    	= $saldoAnterior;
+			$respuesta['saldo']    			= $billetera->getSaldo();
+
+		return $respuesta;
+		
+	}
+
 	
 
 	if(!isset($HTTP_RAW_POST_DATA)){
 		$HTTP_RAW_POST_DATA = file_get_contents('php://input');
 	}
 	$server = new soap_server();
-		//$server->configureWSDL("Info Blog", "urn:infoBlog");
-		$server->register("consultarCliente");
+		//$server->configureWSDL("Info Blog", "urn:infoBlog");		
 		$server->register("registrarCliente");		
 		$server->register("registrarBilletera");
-
-		$server->register("probar");
+		$server->register("consultarCliente");
+		$server->register("recargarBilletera");
+		
 		
 		$server->service($HTTP_RAW_POST_DATA);
 		exit;
