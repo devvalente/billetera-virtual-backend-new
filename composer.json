@@ -1,0 +1,11 @@
+{
+	"require":{
+		"doctrine/orm" : "^2.5",
+		"symfony/yaml" : "2.*",
+		"swiftmailer/swiftmailer": "^6.0",
+		"econea/nusoap": "~0.9.5.1"
+	},
+	"autoload":{
+		"psr-0" : { "":"/src" }
+	}
+}

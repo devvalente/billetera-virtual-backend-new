@@ -1,0 +1,10 @@
+{
+	"email":{
+		"prot":"smtp",
+		"host":"smtp.gmail.com",
+		"port":465,
+		"ency":"ssl",
+		"user":"",
+		"pass":""
+	}
+}
