@@ -48,6 +48,14 @@
 			echo json_encode($respuesta, JSON_UNESCAPED_UNICODE);
 		}
 
+		//CONFIRMAR PAGO    
+	    if($accion == 'confirmar_pago'){
+	      $cliente = $_POST['cliente'];
+	      $token = $_POST['token'];
+	      $respuesta = confirmarPago($cliente, $token);
+	      echo json_encode($respuesta);
+	    }
+
 	}
 	
 	if($_SERVER['REQUEST_METHOD']=='GET'){

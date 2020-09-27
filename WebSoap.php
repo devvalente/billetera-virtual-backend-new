@@ -227,6 +227,90 @@
 				}
 			}	
 	
+	##CONFIRMAR PAGO
+	function confirmarPago($clienteId, $token){	
+	    $em = entityManager();
+
+	    $cliente = $em->getRepository('Cliente')->findOneBy(array('id'=>$clienteId));
+	    	$documento = $cliente->getDocumento();
+	    $billetera = $em->getRepository('Billetera')->findOneBy(array('documentoId'=>$documento));
+	    $entity  = $em->getRepository('TokenPago')->findOneBy(array('token'=>$token));
+
+	    //Si existe el token
+	    if($entity){
+	      //Desquitar dinero
+	      $compra = $em->getRepository('Compra')->findOneBy(array('id'=>$entity->getCompraId()));
+	      //Si status de compra está en falso entonces:: 
+	      if($compra->getStatus() == false ){
+	      	//Si el saldo en la billetera es mayor al monto de la compra
+	      	if($billetera->getSaldo() > $compra->getTotal()){
+				//Status de compra pasa a verdadero y se resta saldo a billetera
+					$compra->setStatus(true);
+		        $em->persist($compra);
+		        $em->flush($compra);          
+		            $saldoAnterior = $billetera->getSaldo();
+		            $billetera->setSaldo($billetera->getSaldo()-$compra->getTotal());
+		        $em->persist($billetera);
+		        $em->flush($billetera);
+
+		        //Enviar documento al correo
+		        enviarEmailConfirmacionPago($cliente->getEmail(), $documento, $compra, $billetera, $saldoAnterior);
+
+		        //Respuesta
+		        $respuesta = [];
+		        $respuesta['status'] = 'Ok';
+		        $respuesta['documento'] = $documento;
+		        $respuesta['saldo'] = $billetera->getSaldo();
+		        return $respuesta;
+	      	}	
+	      }else{
+	        $respuesta = [];
+	        $respuesta['status'] = 'Error';
+	        return $respuesta;
+	      }
+	      
+	    }
+  	}
+    function enviarEmailConfirmacionPago($email, $documento, $compra, $billetera, $saldoAnterior){
+    	$con_email = connectEmail();
+			try {		    
+			    $transport = (new Swift_SmtpTransport())
+			        ->setHost($con_email->host)
+			        ->setPort($con_email->port)
+			        ->setEncryption($con_email->ency)
+			        ->setUsername($con_email->user)
+			        ->setPassword($con_email->pass);	        
+            $mailer = new Swift_Mailer($transport);           
+            $message = new Swift_Message();
+            $message->setSubject("Confirmación de pago Epayco.");
+            $message->setFrom([$con_email->user => 'Waller Technology']);
+            $message->addTo($email,'destinatario');
+            $body="<html><body>";
+              $body.="<h2>Confirmación de compra</h2>";         
+              //$body.="<h5>Pedido con fecha: ".strftime($compra->getFecha(), "%H:%m:%s")."</h5>";              
+              $body.="<p>Documento: ".$documento."</p>";
+              $body.="<p>SubTotal: ".$compra->getSubtotal()."</p>";
+              $body.="<p>Iva: ".$compra->getIva()."</p>";
+              $body.="<p>Total: ".$compra->getTotal()."</p>";
+              $body.="<br />";
+              $body.="<p>Compra realizada con éxito.</p>";
+              $body.="<p>Su saldo anterior: ".$saldoAnterior."</p>";
+              $body.="<p>Su saldo actual: ".$billetera->getSaldo()."</p>";              
+              $body.="</body></html>";
+            //$message->setBody($body);
+            $message->addPart($body, 'text/html');
+            $result = $mailer->send($message);
+            if($result){
+                //echo "Enviado correctamente";
+            }
+        } catch (Exception $e) {
+            echo "<pre>";
+                var_dump($e->getMessage());
+            echo "</pre>";
+            die();
+          
+        }
+    }
 
 	if(!isset($HTTP_RAW_POST_DATA)){
 		$HTTP_RAW_POST_DATA = file_get_contents('php://input');
@@ -240,6 +324,8 @@
 		$server->register("consultarSaldo");
 		$server->register("pagarProducto");
 		$server->register("enviarEmailTokenPago");
+		$server->register("confirmarPago");
+		$server->register("enviarEmailConfirmacionPago");
 		
 		
 		$server->service($HTTP_RAW_POST_DATA);

@@ -53,5 +53,12 @@
 		return $respuesta;
 	}
 
+	##CONFIRMAR PAGO
+	function confirmarPago($clienteId, $token){
+		$clienteSoap = serverSoap();
+		$respuesta = $clienteSoap->call("confirmarPago", array("clienteId"=>$clienteId, "token"=>$token));
+		return $respuesta;
+	}
+
 
 ?>
