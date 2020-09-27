@@ -30,6 +30,15 @@
 			echo json_encode($respuesta, JSON_NUMERIC_CHECK);
 		}
 
+		//CONSULTAR SALDO
+		if($accion == 'consultar_saldo'){			
+			$data = [];
+				$data[0] = $_POST['documento'];			
+				$data[1] = $_POST['celular'];			
+			$saldo 		 = consultarSaldo($data);
+			echo json_encode($saldo);
+		}
+
 	}
 	
 	if($_SERVER['REQUEST_METHOD']=='GET'){

@@ -115,6 +115,19 @@
 		
 	}
 
+	##CONSULTAR SALDO
+	function consultarSaldo($data){		
+		$em = entityManager();
+
+		$entity = $em->getRepository('Billetera');
+		$billetera = $entity->findBy(array("documentoId" => $data[0]));	
+			$billeteraX = [];
+			$billeteraX['documento'] = $billetera[0]->getDocumentoId();		
+			$billeteraX['saldo']     = $billetera[0]->getSaldo();	
+			$billeteraX['divisa']	 = "Pesos";
+		return $billeteraX;		
+	}
+
 	
 
 	if(!isset($HTTP_RAW_POST_DATA)){
@@ -126,6 +139,7 @@
 		$server->register("registrarBilletera");
 		$server->register("consultarCliente");
 		$server->register("recargarBilletera");
+		$server->register("consultarSaldo");
 		
 		
 		$server->service($HTTP_RAW_POST_DATA);

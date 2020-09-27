@@ -20,7 +20,7 @@
 		}
 	}
 
-	#CONSULTAR CLIENTE
+	##CONSULTAR CLIENTE
 	function consultarCliente($id){		
 		$clienteSoap = serverSoap();
 		if($id > 0){
@@ -32,11 +32,18 @@
 		}
 	}
 
-	#RECARGAR BILLETERA
+	##RECARGAR BILLETERA
 	function recargarBilletera($data){
 		$clienteSoap = serverSoap();
 		$respuesta = $clienteSoap->call("recargarBilletera", array("data"=>$data));
 		return $respuesta;
+	}
+
+	##CONSULTAR SALDO
+	function consultarSaldo($data){
+		$clienteSoap = serverSoap();
+		$respuesta = $clienteSoap->call("consultarSaldo", array("data"=>$data));
+		return $respuesta;		
 	}
 
 
