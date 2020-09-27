@@ -4,6 +4,8 @@
 	require_once 'config/bootstrap.php';
 	require_once __DIR__.'\src\Entities\Cliente.php';	
 	require_once __DIR__.'\src\Entities\Billetera.php';	
+	require_once __DIR__.'\src\Entities\Compra.php';
+	require_once __DIR__.'\src\Entities\TokenPago.php';
 
 
 	$GLOBALS['entityManager'];	
@@ -11,6 +13,14 @@
 		global $entityManager;	
 		$em = $entityManager;
 		return $em;
+	}
+
+	##FUNCION CARGAR CONFIGURACIÓN DEL CORREO##
+	function connectEmail(){
+		$data = file_get_contents("config/email/email.json");		
+		$products = json_decode($data, true);
+		$con_email = (object) $products["email"];
+		return $con_email;
 	}
 
 	##REGISTAR CLIENTE
@@ -128,6 +138,94 @@
 		return $billeteraX;		
 	}
 
+
+	##PAGAR
+	function pagarProducto($cliente, $monto, $iva){			
+		$em = entityManager();
+		//Buscar billetera según documento del cliente
+		$cliente = $em->getRepository('Cliente')->findOneBy(array("id"=>$cliente));
+		$documento = $cliente->getDocumento();
+		$billetera = $em->getRepository('Billetera')->findOneBy(array("documentoId"=>$documento));
+		//Si tiene saldo
+		$total = $monto + ($monto * ($iva/100));
+		if($billetera->getSaldo()>($total)){					
+			//Generar token						
+			$hora = date('H').date('i');
+			$token = md5($documento.$monto.$hora);
+			$token = substr($token, 0, 6);
+			//Generar compra			
+			$fecha = new DateTime("now");
+			$compra = new Compra();
+				$compra->setBilleteraId($billetera->getId());
+				$compra->setSubtotal($monto);
+				$compra->setIva($monto*($iva/100));
+				$compra->setTotal($total);
+				$compra->setFecha($fecha);
+				$compra->setStatus(false);
+			$em->persist($compra);
+			$em->flush($compra);
+				$compraId = $compra->getId();			
+			//Generar token_pagos
+			$tokenPago = new TokenPago();
+				$tokenPago->setBilleteraId($billetera->getId());
+				$tokenPago->setEmail($cliente->getEmail());
+				$tokenPago->setToken($token);
+				$tokenPago->setCompraId($compraId);			
+				//24 horas más
+				$fecha = new DateTime('tomorrow');				
+				$tokenPago->setExpiracion($fecha);
+			$em->persist($tokenPago);
+			$em->flush($tokenPago);
+			//Enviar a correo el token			
+				enviarEmailTokenPago($cliente->getEmail(), $documento, $compra, $tokenPago);
+			//Devolver aviso para confirmación			
+			$respuesta = [];
+				$respuesta['documento'] = $documento;
+				$respuesta['email'] = $cliente->getEmail();
+			return ($respuesta);
+		}else{
+			return "No tiene saldo suficiente.";
+		}
+	}			
+
+			##Funcion para enviar a los email de los clientes el token generado##
+			function enviarEmailTokenPago($email, $documento, $compra, $tokenPago){
+				$con_email = connectEmail();
+				try {		    
+				    $transport = (new Swift_SmtpTransport())
+				        ->setHost($con_email->host)
+				        ->setPort($con_email->port)
+				        ->setEncryption($con_email->ency)
+				        ->setUsername($con_email->user)
+				        ->setPassword($con_email->pass);		        
+				    $mailer = new Swift_Mailer($transport);		 		    
+				    $message = new Swift_Message();
+				    $message->setSubject("Token confirmación pago Epayco.");
+				    $message->setFrom([$con_email->user => 'Waller Technology']);
+				    $message->addTo($email,'destinatario');
+				    $body="<html><body>";
+				    	$body.="<h2>Token para confirmación de compra</h2>";		    					    	
+				    	$body.="<p>Token: ".$tokenPago->getToken()."</p>";
+				    	$body.="<p>Documento: ".$documento."</p>";
+				    	$body.="<p>SubTotal: ".$compra->getSubtotal()."</p>";
+				    	$body.="<p>Iva: ".$compra->getIva()."</p>";
+				    	$body.="<p>Total: ".$compra->getTotal()."</p>";
+				    	$body.="</body></html>";
+				    //$message->setBody($body);
+				    $message->addPart($body, 'text/html');
+				    $result = $mailer->send($message);
+				    if($result){
+				        //echo "Enviado correctamente";
+				    }
+				} catch (Exception $e) {
+				    echo "<pre>";
+				        var_dump($e->getMessage());
+				    echo "</pre>";
+				    return $e->getMessage();
+				    die();
+				  
+				}
+			}	
 	
 
 	if(!isset($HTTP_RAW_POST_DATA)){
@@ -140,6 +238,8 @@
 		$server->register("consultarCliente");
 		$server->register("recargarBilletera");
 		$server->register("consultarSaldo");
+		$server->register("pagarProducto");
+		$server->register("enviarEmailTokenPago");
 		
 		
 		$server->service($HTTP_RAW_POST_DATA);

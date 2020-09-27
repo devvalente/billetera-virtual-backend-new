@@ -39,6 +39,15 @@
 			echo json_encode($saldo);
 		}
 
+		//PAGAR
+		if($accion == 'pagar'){
+			$cliente = $_POST['cliente'];
+			$monto = $_POST['monto'];
+			$iva   = $_POST['iva'];
+			$respuesta = pagarProducto($cliente, $monto, $iva);
+			echo json_encode($respuesta, JSON_UNESCAPED_UNICODE);
+		}
+
 	}
 	
 	if($_SERVER['REQUEST_METHOD']=='GET'){

@@ -46,5 +46,12 @@
 		return $respuesta;		
 	}
 
+	##PAGAR
+	function pagarProducto($cliente, $monto, $iva){
+		$clienteSoap = serverSoap();
+		$respuesta = $clienteSoap->call("pagarProducto", array("cliente"=>$cliente, "monto"=>$monto, "iva"=>$iva));
+		return $respuesta;
+	}
+
 
 ?>
