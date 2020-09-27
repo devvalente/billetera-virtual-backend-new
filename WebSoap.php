@@ -148,22 +148,23 @@
 		$billetera = $em->getRepository('Billetera')->findOneBy(array("documentoId"=>$documento));
 		//Si tiene saldo
 		$total = $monto + ($monto * ($iva/100));
-		if($billetera->getSaldo()>($total)){					
+		$saldo = (double)$billetera->getSaldo();		
+		if($saldo>($total)){			
 			//Generar token						
 			$hora = date('H').date('i');
 			$token = md5($documento.$monto.$hora);
 			$token = substr($token, 0, 6);
-			//Generar compra			
+			//Generar compra						
 			$fecha = new DateTime("now");
 			$compra = new Compra();
-				$compra->setBilleteraId($billetera->getId());
+				$compra->setBilleteraId($billetera->getId());				
 				$compra->setSubtotal($monto);
 				$compra->setIva($monto*($iva/100));
 				$compra->setTotal($total);
-				$compra->setFecha($fecha);
-				$compra->setStatus(false);
-			$em->persist($compra);
-			$em->flush($compra);
+				$compra->setFecha($fecha);				
+				$compra->setStatus(false);				
+			$em->persist($compra);			
+			$em->flush($compra);			
 				$compraId = $compra->getId();			
 			//Generar token_pagos
 			$tokenPago = new TokenPago();
@@ -180,11 +181,16 @@
 				enviarEmailTokenPago($cliente->getEmail(), $documento, $compra, $tokenPago);
 			//Devolver aviso para confirmación			
 			$respuesta = [];
+				$respuesta['estatus']='Ok';
+				$respuesta['id']= $cliente->getId();				
 				$respuesta['documento'] = $documento;
 				$respuesta['email'] = $cliente->getEmail();
 			return ($respuesta);
 		}else{
-			return "No tiene saldo suficiente.";
+			$respuesta = [];
+				$respuesta['estatus']='Error';
+				$respuesta['mensaje']='No tiene saldo suficiente.';
+			return $respuesta;
 		}
 	}			
 
